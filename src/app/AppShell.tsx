@@ -1,5 +1,86 @@
-import type {ReactNode} from 'react';
-import {BookOpen,ChartNoAxesCombined,Heart,History,Leaf,Settings2,ArrowLeftRight,LockKeyhole} from 'lucide-react';
-import type {Space} from '../domain/types';
-const items=[['/record','记录',BookOpen],['/insights','洞察',ChartNoAxesCombined],['/care','关怀',Heart],['/review','回顾',History]] as const;
-export function AppShell({children,space,route,onSwitch}:{children:ReactNode;space:Space;route:string;onSwitch:()=>void}){return <><header className="site-header"><div className="header-inner"><a className="brand" href="#/record"><span className="brand-icon"><Leaf size={23}/></span><span>心晴<small>情绪日记与自我关怀</small></span></a><nav aria-label="主导航">{items.map(([path,label,Icon])=><a href={'#'+path} key={path} className={route.startsWith(path)?'active':''}><Icon size={18}/>{label}</a>)}</nav><div className="header-actions"><button className="space-switch" onClick={onSwitch}><span className={'space-dot '+space}/>{space==='demo'?'示例空间':'个人空间'}<ArrowLeftRight size={14}/></button><a className="icon-button" href="#/data" aria-label="数据管理"><Settings2 size={19}/></a></div></div></header>{space==='demo'?<div className="demo-notice"><span>示例体验 · 虚构数据</span><span>这是一个职场新人的两周故事，你可以放心探索。</span></div>:null}<main className="main-content" id="main-content">{children}</main><footer className="site-footer"><span><Leaf size={14}/> 慢慢来，你正在更了解自己。</span><span><LockKeyhole size={13}/> 数据仅保存在当前浏览器 <span className="footer-dot">·</span> <a href="#/data">管理与备份</a></span></footer></>;}
+import type { ReactNode } from "react";
+import {
+  BookOpen,
+  ChartNoAxesCombined,
+  Heart,
+  History,
+  Leaf,
+  Settings2,
+  ArrowLeftRight,
+  LockKeyhole,
+} from "lucide-react";
+import type { Space } from "../domain/types";
+const items = [
+  ["/record", "记录", BookOpen],
+  ["/insights", "洞察", ChartNoAxesCombined],
+  ["/care", "关怀", Heart],
+  ["/review", "回顾", History],
+] as const;
+export function AppShell({
+  children,
+  space,
+  route,
+  onSwitch,
+}: {
+  children: ReactNode;
+  space: Space;
+  route: string;
+  onSwitch: () => void;
+}) {
+  return (
+    <>
+      <header className="site-header">
+        <div className="header-inner">
+          <a className="brand" href="#/record">
+            <span className="brand-icon">
+              <Leaf size={23} />
+            </span>
+            <span>
+              心晴<small>情绪日记与自我关怀</small>
+            </span>
+          </a>
+          <nav aria-label="主导航">
+            {items.map(([path, label, Icon]) => (
+              <a
+                href={"#" + path}
+                key={path}
+                className={route.startsWith(path) ? "active" : ""}
+              >
+                <Icon size={18} />
+                {label}
+              </a>
+            ))}
+          </nav>
+          <div className="header-actions">
+            <button className="space-switch" onClick={onSwitch}>
+              <span className={"space-dot " + space} />
+              {space === "demo" ? "示例空间" : "个人空间"}
+              <ArrowLeftRight size={14} />
+            </button>
+            <a className="icon-button" href="#/data" aria-label="数据管理">
+              <Settings2 size={19} />
+            </a>
+          </div>
+        </div>
+      </header>
+      {space === "demo" ? (
+        <div className="demo-notice">
+          <span>示例体验 · 虚构数据</span>
+          <span>这是一个职场新人的两周故事，你可以放心探索。</span>
+        </div>
+      ) : null}
+      <main className="main-content" id="main-content">
+        {children}
+      </main>
+      <footer className="site-footer">
+        <span>
+          <Leaf size={14} /> 慢慢来，你正在更了解自己。
+        </span>
+        <span>
+          <LockKeyhole size={13} /> 数据仅保存在当前浏览器{" "}
+          <span className="footer-dot">·</span> <a href="#/data">管理与备份</a>
+        </span>
+      </footer>
+    </>
+  );
+}

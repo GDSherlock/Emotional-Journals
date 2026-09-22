@@ -1,19 +1,236 @@
-import {useState} from 'react';
-import {Wind,CloudRain,Footprints,ArrowRight,Clock,Heart} from 'lucide-react';
-import type {PageProps} from '../journal/JournalPage';
-import type {Preferences,CareKind,Emotion,Score} from '../domain/types';
-import {emotions,careNames} from '../domain/catalog';
-import {recommend} from './recommend';
-import type {Session} from './session';
-import {CareSession} from './CareSession';
-import {RatingInput} from '../ui/RatingInput';
-import {PageHeading,StatusMessage} from '../ui/StatusMessage';
-const activities=[{kind:'breathing' as const,Icon:Wind,title:'给自己，一次深呼吸',description:'用一分钟，把注意力从纷乱的思绪带回当下。',duration:'1 分钟',tone:'sage'},{kind:'sound' as const,Icon:CloudRain,title:'听一场，安静的雨',description:'不必做什么，让轻柔的环境音陪伴此刻。',duration:'1–5 分钟',tone:'blue'},{kind:'movement' as const,Icon:Footprints,title:'起来走走，松一松',description:'离开屏幕片刻，让紧绷的身体慢慢舒展。',duration:'3–5 分钟',tone:'sand'}];
-export function CarePage({repo,space,snapshot,refresh,prefs,setPrefs,route}:PageProps&{prefs:Preferences;setPrefs:(p:Preferences)=>void;route:string}){
- const journalId=new URLSearchParams(route.split('?')[1]??'').get('journal');const linked=snapshot.journals.find(j=>j.id===journalId);
- const [chosenEmotions,setChosenEmotions]=useState<Emotion[]>(linked?.emotions??[]),[kind,setKind]=useState<CareKind|null>(null),[before,setBefore]=useState<Score|undefined>(),[minutes,setMinutes]=useState(3),[session,setSession]=useState<Session|null>(null),[error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false);const suggestion=recommend(chosenEmotions);
- async function start(){if(!kind||busy)return;setBusy(true);setError(null);const now=Date.now();const next:Session={record:{id:crypto.randomUUID(),kind,startedAt:new Date(now).toISOString(),status:'running',before,journalId:linked?.id},durationMs:(kind==='breathing'?1:minutes)*60000,elapsedMs:0,lastTick:now};try{await repo.saveCare(space,next.record);setSession(next);}catch(e){setError('无法保存活动，请重试。'+String(e));}finally{setBusy(false);}}
- if(session)return <CareSession key={session.record.id} initial={session} repo={repo} space={space} prefs={prefs} setPrefs={setPrefs} onClose={()=>{setSession(null);setKind(null);void refresh();}}/>;
- if(kind)return <><button className="back" onClick={()=>setKind(null)}>返回关怀活动</button><section className="panel care-setup"><Heart className="setup-icon"/><h1>{careNames[kind]}</h1><p className="muted">开始前，留意一下此刻的自己。评分可以跳过。</p><RatingInput label="开始前的感受" value={before} onChange={setBefore}/>{kind!=='breathing'?<label className="duration-label">留给自己的时间 <select value={minutes} onChange={e=>setMinutes(Number(e.target.value))}>{(kind==='sound'?[1,3,5]:[3,5]).map(m=><option key={m} value={m}>{m} 分钟</option>)}</select></label>:null}<StatusMessage error={error}/><button className="primary" disabled={busy} onClick={()=>void start()}>{busy?'正在准备…':'开始练习'}<ArrowRight size={16}/></button><p className="fine-print">过程中可暂停或退出，舒服比完成更重要。</p></section></>;
- return <><PageHeading title="留一点时间，照顾自己" description="不用一下子解决所有事情。先做一件小事，让自己舒服一点。"/><section className="care-checkin"><div><h2>此刻，什么感受最明显？</h2><p>选择情绪，看看适合当下的小建议。也可以直接挑选活动。</p></div><div className="chips">{emotions.map(e=><label key={e} className={`chip ${chosenEmotions.includes(e)?'selected':''}`}><input type="checkbox" checked={chosenEmotions.includes(e)} onChange={()=>setChosenEmotions(chosenEmotions.includes(e)?chosenEmotions.filter(x=>x!==e):[...chosenEmotions,e])}/>{e}</label>)}</div></section>{suggestion?<div className="recommend-note"><Heart size={18}/><p>{suggestion.reason}</p></div>:null}<div className="care-grid">{activities.map(a=><article className={`care-card ${a.tone}`} key={a.kind}><div className="care-art"><a.Icon size={66} strokeWidth={.9}/></div><div className="care-card-body"><div className="care-meta"><span><Clock size={12}/> {a.duration}</span>{suggestion?.kind===a.kind?<span>适合此刻</span>:null}</div><h2>{a.title}</h2><p>{a.description}</p><button onClick={()=>{setKind(a.kind);setBefore(undefined);setMinutes(3);}}>{careNames[a.kind]}<ArrowRight size={16}/></button></div></article>)}</div><div className="care-bottom-note"><Heart size={18}/><p>关怀不是一项必须完成的任务。<br/><span>你可以选择，也可以休息；每一种感受都可以被如实记录。</span></p></div></>;
+import { useState } from "react";
+import {
+  Wind,
+  CloudRain,
+  Footprints,
+  ArrowRight,
+  Clock,
+  Heart,
+} from "lucide-react";
+import type { PageProps } from "../journal/JournalPage";
+import type { Preferences, CareKind, Emotion, Score } from "../domain/types";
+import { emotions, careNames } from "../domain/catalog";
+import { recommend } from "./recommend";
+import type { Session } from "./session";
+import { CareSession } from "./CareSession";
+import { RatingInput } from "../ui/RatingInput";
+import { PageHeading, StatusMessage } from "../ui/StatusMessage";
+const activities = [
+  {
+    kind: "breathing" as const,
+    Icon: Wind,
+    title: "给自己，一次深呼吸",
+    description: "用一分钟，把注意力从纷乱的思绪带回当下。",
+    duration: "1 分钟",
+    tone: "sage",
+  },
+  {
+    kind: "sound" as const,
+    Icon: CloudRain,
+    title: "听一场，安静的雨",
+    description: "不必做什么，让轻柔的环境音陪伴此刻。",
+    duration: "1–5 分钟",
+    tone: "blue",
+  },
+  {
+    kind: "movement" as const,
+    Icon: Footprints,
+    title: "起来走走，松一松",
+    description: "离开屏幕片刻，让紧绷的身体慢慢舒展。",
+    duration: "3–5 分钟",
+    tone: "sand",
+  },
+];
+export function CarePage({
+  repo,
+  space,
+  snapshot,
+  refresh,
+  prefs,
+  setPrefs,
+  route,
+}: PageProps & {
+  prefs: Preferences;
+  setPrefs: (p: Preferences) => void;
+  route: string;
+}) {
+  const journalId = new URLSearchParams(route.split("?")[1] ?? "").get(
+    "journal",
+  );
+  const linked = snapshot.journals.find((j) => j.id === journalId);
+  const [chosenEmotions, setChosenEmotions] = useState<Emotion[]>(
+      linked?.emotions ?? [],
+    ),
+    [kind, setKind] = useState<CareKind | null>(null),
+    [before, setBefore] = useState<Score | undefined>(),
+    [minutes, setMinutes] = useState(3),
+    [session, setSession] = useState<Session | null>(null),
+    [error, setError] = useState<string | null>(null),
+    [busy, setBusy] = useState(false);
+  const suggestion = recommend(chosenEmotions);
+  async function start() {
+    if (!kind || busy) return;
+    setBusy(true);
+    setError(null);
+    const now = Date.now();
+    const next: Session = {
+      record: {
+        id: crypto.randomUUID(),
+        kind,
+        startedAt: new Date(now).toISOString(),
+        status: "running",
+        before,
+        journalId: linked?.id,
+      },
+      durationMs: (kind === "breathing" ? 1 : minutes) * 60000,
+      elapsedMs: 0,
+      lastTick: now,
+    };
+    try {
+      await repo.saveCare(space, next.record);
+      setSession(next);
+    } catch (e) {
+      setError("无法保存活动，请重试。" + String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (session)
+    return (
+      <CareSession
+        key={session.record.id}
+        initial={session}
+        onSaved={refresh}
+        repo={repo}
+        space={space}
+        prefs={prefs}
+        setPrefs={setPrefs}
+        onClose={() => {
+          setSession(null);
+          setKind(null);
+          void refresh();
+        }}
+      />
+    );
+  if (kind)
+    return (
+      <>
+        <button className="back" onClick={() => setKind(null)}>
+          返回关怀活动
+        </button>
+        <section className="panel care-setup">
+          <Heart className="setup-icon" />
+          <h1>{careNames[kind]}</h1>
+          <p className="muted">开始前，留意一下此刻的自己。评分可以跳过。</p>
+          <RatingInput
+            label="开始前的感受"
+            value={before}
+            onChange={setBefore}
+          />
+          {kind !== "breathing" ? (
+            <label className="duration-label">
+              留给自己的时间{" "}
+              <select
+                value={minutes}
+                onChange={(e) => setMinutes(Number(e.target.value))}
+              >
+                {(kind === "sound" ? [1, 3, 5] : [3, 5]).map((m) => (
+                  <option key={m} value={m}>
+                    {m} 分钟
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <StatusMessage error={error} />
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={() => void start()}
+          >
+            {busy ? "正在准备…" : "开始练习"}
+            <ArrowRight size={16} />
+          </button>
+          <p className="fine-print">过程中可暂停或退出，舒服比完成更重要。</p>
+        </section>
+      </>
+    );
+  return (
+    <>
+      <PageHeading
+        title="留一点时间，照顾自己"
+        description="不用一下子解决所有事情。先做一件小事，让自己舒服一点。"
+      />
+      <section className="care-checkin">
+        <div>
+          <h2>此刻，什么感受最明显？</h2>
+          <p>选择情绪，看看适合当下的小建议。也可以直接挑选活动。</p>
+        </div>
+        <div className="chips">
+          {emotions.map((e) => (
+            <label
+              key={e}
+              className={`chip ${chosenEmotions.includes(e) ? "selected" : ""}`}
+            >
+              <input
+                type="checkbox"
+                checked={chosenEmotions.includes(e)}
+                onChange={() =>
+                  setChosenEmotions(
+                    chosenEmotions.includes(e)
+                      ? chosenEmotions.filter((x) => x !== e)
+                      : [...chosenEmotions, e],
+                  )
+                }
+              />
+              {e}
+            </label>
+          ))}
+        </div>
+      </section>
+      {suggestion ? (
+        <div className="recommend-note">
+          <Heart size={18} />
+          <p>{suggestion.reason}</p>
+        </div>
+      ) : null}
+      <div className="care-grid">
+        {activities.map((a) => (
+          <article className={`care-card ${a.tone}`} key={a.kind}>
+            <div className="care-art">
+              <a.Icon size={66} strokeWidth={0.9} />
+            </div>
+            <div className="care-card-body">
+              <div className="care-meta">
+                <span>
+                  <Clock size={12} /> {a.duration}
+                </span>
+                {suggestion?.kind === a.kind ? <span>适合此刻</span> : null}
+              </div>
+              <h2>{a.title}</h2>
+              <p>{a.description}</p>
+              <button
+                onClick={() => {
+                  setKind(a.kind);
+                  setBefore(undefined);
+                  setMinutes(3);
+                }}
+              >
+                {careNames[a.kind]}
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="care-bottom-note">
+        <Heart size={18} />
+        <p>
+          关怀不是一项必须完成的任务。
+          <br />
+          <span>你可以选择，也可以休息；每一种感受都可以被如实记录。</span>
+        </p>
+      </div>
+    </>
+  );
 }

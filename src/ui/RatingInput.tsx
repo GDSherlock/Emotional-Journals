@@ -1,4 +1,81 @@
-import type {Score} from '../domain/types';
-import {feelings,strengths} from '../domain/catalog';
-export function MoodFace({score,size=44}:{score:number;size?:number}){return <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" className={`mood-face mood-${score}`}><circle cx="24" cy="24" r="22" fill="currentColor" opacity=".2"/><circle cx="17" cy="20" r="1.6" fill="currentColor"/><circle cx="31" cy="20" r="1.6" fill="currentColor"/><path d={score===1?'M15 33 Q24 22 33 33':score===2?'M16 31 Q24 26 32 31':score===3?'M17 29 H31':score===4?'M16 27 Q24 35 32 27':'M14 26 Q24 39 34 26 Z'} fill={score===5?'currentColor':'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;}
-export function RatingInput({value,onChange,label='整体感受',intensity=false}:{value?:Score;onChange:(v:Score)=>void;label?:string;intensity?:boolean}){const labels=intensity?strengths:feelings;return <fieldset className={intensity?'strength-field':'mood-field'}><legend>{label}</legend><div className={intensity?'strength-options':'mood-options'}>{labels.map((text,i)=><label className={`rating ${value===i+1?'selected':''}`} key={text}><input type="radio" name={label} checked={value===i+1} onChange={()=>onChange((i+1) as Score)}/>{intensity?<span className="strength-dot" aria-hidden="true">{i+1}</span>:<MoodFace score={i+1}/>}<span>{text}</span></label>)}</div></fieldset>;}
+import type { Score } from "../domain/types";
+import { feelings, strengths } from "../domain/catalog";
+export function MoodFace({
+  score,
+  size = 44,
+}: {
+  score: number;
+  size?: number;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+      className={`mood-face mood-${score}`}
+    >
+      <circle cx="24" cy="24" r="22" fill="currentColor" opacity=".2" />
+      <circle cx="17" cy="20" r="1.6" fill="currentColor" />
+      <circle cx="31" cy="20" r="1.6" fill="currentColor" />
+      <path
+        d={
+          score === 1
+            ? "M15 33 Q24 22 33 33"
+            : score === 2
+              ? "M16 31 Q24 26 32 31"
+              : score === 3
+                ? "M17 29 H31"
+                : score === 4
+                  ? "M16 27 Q24 35 32 27"
+                  : "M14 26 Q24 39 34 26 Z"
+        }
+        fill={score === 5 ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+export function RatingInput({
+  value,
+  onChange,
+  label = "整体感受",
+  intensity = false,
+}: {
+  value?: Score;
+  onChange: (v: Score) => void;
+  label?: string;
+  intensity?: boolean;
+}) {
+  const labels = intensity ? strengths : feelings;
+  return (
+    <fieldset className={intensity ? "strength-field" : "mood-field"}>
+      <legend>{label}</legend>
+      <div className={intensity ? "strength-options" : "mood-options"}>
+        {labels.map((text, i) => (
+          <label
+            className={`rating ${value === i + 1 ? "selected" : ""}`}
+            key={text}
+          >
+            <input
+              type="radio"
+              name={label}
+              checked={value === i + 1}
+              onChange={() => onChange((i + 1) as Score)}
+            />
+            {intensity ? (
+              <span className="strength-dot" aria-hidden="true">
+                {i + 1}
+              </span>
+            ) : (
+              <MoodFace score={i + 1} />
+            )}
+            <span>{text}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}

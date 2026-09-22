@@ -1,20 +1,226 @@
-import {useState} from 'react';
-import {ArrowUpRight,Sparkles,Info,NotebookPen,CalendarDays,Heart} from 'lucide-react';
-import type {PageProps} from '../journal/JournalPage';
-import type {Preferences} from '../domain/types';
-import {localDateOf} from '../domain/dates';
-import {careNames} from '../domain/catalog';
-import {analyze} from './analyze';
-import {TrendChart} from './TrendChart';
-import {EvidenceView} from './EvidenceView';
-import {PageHeading,EmptyState,StatusMessage} from '../ui/StatusMessage';
-export function InsightsPage({snapshot,repo,prefs,setPrefs}:PageProps&{prefs:Preferences;setPrefs:(p:Preferences)=>void}){
- const [error,setError]=useState<string|null>(null),[evidence,setEvidence]=useState<string[]|null>(null);const days=prefs.rangeDays,a=analyze(snapshot,localDateOf(new Date()),days),count=a.trend.reduce((n,d)=>n+d.ids.length,0),recorded=a.trend.filter(d=>d.mean!==null).length;
- async function range(days:7|30){try{const next={...prefs,rangeDays:days};await repo.savePreferences(next);setPrefs(next);setEvidence(null);}catch(e){setError(String(e));}}
- return <><PageHeading title="在变化里，更了解自己" description="让记录慢慢连成线，看见情绪与日常生活的关联。" action={<div className="segmented" aria-label="时间范围"><button className={days===7?'active':''} onClick={()=>void range(7)}>近 7 天</button><button className={days===30?'active':''} onClick={()=>void range(30)}>近 30 天</button></div>}/><StatusMessage error={error}/>
- <div className="insight-summary"><div><NotebookPen size={18}/><span>留下了 <strong>{count}</strong> 次记录</span></div><div><CalendarDays size={18}/><span>看见了 <strong>{recorded}</strong> 天的自己</span></div><div><Heart size={18}/><span><strong>{a.feedback.reduce((n,c)=>n+c.count,0)}</strong> 次关怀前后反馈</span></div></div>
- <section className="panel trend-panel"><div className="section-top"><div><h2>情绪的起伏</h2><p>每天的平均感受 · 1 分（很不好）— 5 分（很好）</p></div><span className="chart-key"><i/> 整体感受</span></div>{count?<TrendChart trend={a.trend} onSelect={setEvidence}/>:<EmptyState title="从第一条记录开始">有记录的日子才会出现在曲线上，空白也没有关系。</EmptyState>}{evidence?<div className="evidence-panel"><div className="section-top"><h3>这一天的记录</h3><button onClick={()=>setEvidence(null)}>收起</button></div><EvidenceView ids={evidence} snapshot={snapshot}/></div>:null}<p className="fine-print"><Info size={13}/> 没有记录的日期保留空白；一天多次记录取平均值。</p></section>
- <div className="insight-columns"><section className="panel"><div className="section-top"><div><h2>哪些日常，与情绪相伴？</h2><p>从你选择的事件标签里，发现一些线索。</p></div></div>{a.events.length?a.events.map(e=><article className="association" key={e.tag}><div><h3>{e.tag}</h3><span>{e.ids.length} 条相关记录</span></div><p>平均感受 <strong>{e.mean.toFixed(1)}</strong><span className="muted"> / 同期整体 {e.overall.toFixed(1)}</span></p><div className="compare-bar"><span style={{width:`${e.mean/5*100}%`}}/></div><p className="fine-print">与同期整体相比{e.relation==='higher'?'较高':e.relation==='lower'?'较低':'接近'}，这是一条值得留意的线索。</p><details><summary>查看依据</summary><EvidenceView ids={e.ids} snapshot={snapshot}/><p className="muted">同期其他记录（{e.otherIds.length} 条）</p><EvidenceView ids={e.otherIds} snapshot={snapshot}/></details></article>):<div className="quiet-empty"><p>再给自己一点时间</p><small>至少积累 7 条日记，某事件有 3 条记录且存在其他记录后，这里会展示比较。</small></div>}<p className="fine-print">样本有限，仅反映当前记录中的关联，不代表因果关系。</p></section>
- <section className="panel"><div className="section-top"><div><h2>关怀之后，感觉如何？</h2><p>看看哪些小行动，曾带来不同的感受。</p></div></div>{a.feedback.length?a.feedback.map(f=><article className="feedback-row" key={f.kind}><div><h3>{careNames[f.kind]}</h3><span className="delta">{f.meanDelta>0?'+':''}{f.meanDelta.toFixed(1)}</span></div><p>{f.count} 次完整反馈 · 平均感受变化</p><small>改善 {f.improved} 次 · 不变 {f.unchanged} 次 · 下降 {f.declined} 次</small><details><summary>查看反馈记录</summary><EvidenceView kind="care" ids={f.ids} snapshot={snapshot}/></details></article>):<div className="quiet-empty"><Heart size={26}/><p>留意行动前后的自己</p><small>完成一次活动并填写前后感受，就能在这里回顾。</small><a className="text-link" href="#/care">去做一个关怀练习 <ArrowUpRight size={15}/></a></div>}<p className="fine-print">没有变好也值得如实记录。这里的变化不代表疗效。</p></section></div>
- <a className="ai-banner" href="#/ai-example"><span className="ai-symbol"><Sparkles size={23}/></span><div><h3>换一个角度，看见情绪的线索</h3><p>查看 AI 解读示例 · 预设内容，不会分析或发送你的日记</p></div><ArrowUpRight size={21}/></a></>;
+import { useState } from "react";
+import {
+  ArrowUpRight,
+  Sparkles,
+  Info,
+  NotebookPen,
+  CalendarDays,
+  Heart,
+} from "lucide-react";
+import type { PageProps } from "../journal/JournalPage";
+import type { Preferences } from "../domain/types";
+import { localDateOf } from "../domain/dates";
+import { careNames } from "../domain/catalog";
+import { analyze } from "./analyze";
+import { TrendChart } from "./TrendChart";
+import { EvidenceView } from "./EvidenceView";
+import { PageHeading, EmptyState, StatusMessage } from "../ui/StatusMessage";
+export function InsightsPage({
+  snapshot,
+  repo,
+  prefs,
+  setPrefs,
+}: PageProps & { prefs: Preferences; setPrefs: (p: Preferences) => void }) {
+  const [error, setError] = useState<string | null>(null),
+    [evidence, setEvidence] = useState<string[] | null>(null);
+  const days = prefs.rangeDays,
+    a = analyze(snapshot, localDateOf(new Date()), days),
+    count = a.trend.reduce((n, d) => n + d.ids.length, 0),
+    recorded = a.trend.filter((d) => d.mean !== null).length;
+  async function range(days: 7 | 30) {
+    try {
+      const next = { ...prefs, rangeDays: days };
+      await repo.savePreferences(next);
+      setPrefs(next);
+      setEvidence(null);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+  return (
+    <>
+      <PageHeading
+        title="在变化里，更了解自己"
+        description="让记录慢慢连成线，看见情绪与日常生活的关联。"
+        action={
+          <div className="segmented" aria-label="时间范围">
+            <button
+              className={days === 7 ? "active" : ""}
+              onClick={() => void range(7)}
+            >
+              近 7 天
+            </button>
+            <button
+              className={days === 30 ? "active" : ""}
+              onClick={() => void range(30)}
+            >
+              近 30 天
+            </button>
+          </div>
+        }
+      />
+      <StatusMessage error={error} />
+      <div className="insight-summary">
+        <div>
+          <NotebookPen size={18} />
+          <span>
+            留下了 <strong>{count}</strong> 次记录
+          </span>
+        </div>
+        <div>
+          <CalendarDays size={18} />
+          <span>
+            看见了 <strong>{recorded}</strong> 天的自己
+          </span>
+        </div>
+        <div>
+          <Heart size={18} />
+          <span>
+            <strong>{a.feedback.reduce((n, c) => n + c.count, 0)}</strong>{" "}
+            次关怀前后反馈
+          </span>
+        </div>
+      </div>
+      <section className="panel trend-panel">
+        <div className="section-top">
+          <div>
+            <h2>情绪的起伏</h2>
+            <p>每天的平均感受 · 1 分（很不好）— 5 分（很好）</p>
+          </div>
+          <span className="chart-key">
+            <i /> 整体感受
+          </span>
+        </div>
+        {count ? (
+          <TrendChart trend={a.trend} onSelect={setEvidence} />
+        ) : (
+          <EmptyState title="从第一条记录开始">
+            有记录的日子才会出现在曲线上，空白也没有关系。
+          </EmptyState>
+        )}
+        {evidence ? (
+          <div className="evidence-panel">
+            <div className="section-top">
+              <h3>这一天的记录</h3>
+              <button onClick={() => setEvidence(null)}>收起</button>
+            </div>
+            <EvidenceView ids={evidence} snapshot={snapshot} />
+          </div>
+        ) : null}
+        <p className="fine-print">
+          <Info size={13} /> 没有记录的日期保留空白；一天多次记录取平均值。
+        </p>
+      </section>
+      <div className="insight-columns">
+        <section className="panel">
+          <div className="section-top">
+            <div>
+              <h2>哪些日常，与情绪相伴？</h2>
+              <p>从你选择的事件标签里，发现一些线索。</p>
+            </div>
+          </div>
+          {a.events.length ? (
+            a.events.map((e) => (
+              <article className="association" key={e.tag}>
+                <div>
+                  <h3>{e.tag}</h3>
+                  <span>{e.ids.length} 条相关记录</span>
+                </div>
+                <p>
+                  平均感受 <strong>{e.mean.toFixed(1)}</strong>
+                  <span className="muted">
+                    {" "}
+                    / 同期整体 {e.overall.toFixed(1)}
+                  </span>
+                </p>
+                <div className="compare-bar">
+                  <span style={{ width: `${(e.mean / 5) * 100}%` }} />
+                </div>
+                <p className="fine-print">
+                  与同期整体相比
+                  {e.relation === "higher"
+                    ? "较高"
+                    : e.relation === "lower"
+                      ? "较低"
+                      : "接近"}
+                  ，这是一条值得留意的线索。
+                </p>
+                <details>
+                  <summary>查看依据</summary>
+                  <EvidenceView ids={e.ids} snapshot={snapshot} />
+                  <p className="muted">
+                    同期其他记录（{e.otherIds.length} 条）
+                  </p>
+                  <EvidenceView ids={e.otherIds} snapshot={snapshot} />
+                </details>
+              </article>
+            ))
+          ) : (
+            <div className="quiet-empty">
+              <p>再给自己一点时间</p>
+              <small>
+                至少积累 7 条日记，某事件有 3
+                条记录且存在其他记录后，这里会展示比较。
+              </small>
+            </div>
+          )}
+          <p className="fine-print">
+            样本有限，仅反映当前记录中的关联，不代表因果关系。
+          </p>
+        </section>
+        <section className="panel">
+          <div className="section-top">
+            <div>
+              <h2>关怀之后，感觉如何？</h2>
+              <p>看看哪些小行动，曾带来不同的感受。</p>
+            </div>
+          </div>
+          {a.feedback.length ? (
+            a.feedback.map((f) => (
+              <article className="feedback-row" key={f.kind}>
+                <div>
+                  <h3>{careNames[f.kind]}</h3>
+                  <span className="delta">
+                    {f.meanDelta > 0 ? "+" : ""}
+                    {f.meanDelta.toFixed(1)}
+                  </span>
+                </div>
+                <p>{f.count} 次完整反馈 · 平均感受变化</p>
+                <small>
+                  改善 {f.improved} 次 · 不变 {f.unchanged} 次 · 下降{" "}
+                  {f.declined} 次
+                </small>
+                <details>
+                  <summary>查看反馈记录</summary>
+                  <EvidenceView kind="care" ids={f.ids} snapshot={snapshot} />
+                </details>
+              </article>
+            ))
+          ) : (
+            <div className="quiet-empty">
+              <Heart size={26} />
+              <p>留意行动前后的自己</p>
+              <small>完成一次活动并填写前后感受，就能在这里回顾。</small>
+              <a className="text-link" href="#/care">
+                去做一个关怀练习 <ArrowUpRight size={15} />
+              </a>
+            </div>
+          )}
+          <p className="fine-print">
+            没有变好也值得如实记录。这里的变化不代表疗效。
+          </p>
+        </section>
+      </div>
+      <a className="ai-banner" href="#/ai-example">
+        <span className="ai-symbol">
+          <Sparkles size={23} />
+        </span>
+        <div>
+          <h3>换一个角度，看见情绪的线索</h3>
+          <p>查看 AI 解读示例 · 预设内容，不会分析或发送你的日记</p>
+        </div>
+        <ArrowUpRight size={21} />
+      </a>
+    </>
+  );
 }
