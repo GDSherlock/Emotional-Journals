@@ -5,6 +5,7 @@ import type {Preferences,Space} from '../domain/types';
 import {useWorkspace} from './useWorkspace';
 import {useRoute,allowLeave,setDirty,navigate} from './router';
 import {AppShell} from './AppShell';
+import {CarePage} from '../care/CarePage';
 import {InsightsPage} from '../insights/InsightsPage';
 import {JournalPage} from '../journal/JournalPage';
 import {ReviewPage} from '../journal/ReviewPage';
@@ -13,11 +14,11 @@ function Workspace({repo,prefs,setPrefs}:{repo:Repository;prefs:Preferences;setP
  const space=prefs.space!;const route=useRoute();const state=useWorkspace(repo,space);
  async function switchSpace(){if(!allowLeave())return;try{const next={...prefs,space:(space==='personal'?'demo':'personal') as Space};await repo.savePreferences(next);setDirty(false);setPrefs(next);navigate('/record');}catch(e){alert(String(e));}}
  const props={repo,space,snapshot:state.snapshot,refresh:state.refresh};
- return <AppShell space={space} route={route} onSwitch={switchSpace}><StatusMessage error={state.error}/>{state.error?<button onClick={()=>void state.refresh()}>重试读取</button>:state.loading?<p role="status">正在打开你的记录…</p>:route.startsWith('/review')?<ReviewPage key={space+route} {...props} route={route}/>:route==='/insights'?<InsightsPage {...props} prefs={prefs} setPrefs={setPrefs}/>:route==='/record'?<JournalPage {...props}/>:<EmptyState title="页面尚未开放"><a href="#/record">返回记录</a></EmptyState>}</AppShell>;
+ return <AppShell space={space} route={route} onSwitch={switchSpace}><StatusMessage error={state.error}/>{state.error?<button onClick={()=>void state.refresh()}>重试读取</button>:state.loading?<p role="status">正在打开你的记录…</p>:route.startsWith('/review')?<ReviewPage key={space+route} {...props} route={route}/>:route.startsWith('/care')?<CarePage key={space+route} {...props} route={route} prefs={prefs} setPrefs={setPrefs}/>:route==='/insights'?<InsightsPage {...props} prefs={prefs} setPrefs={setPrefs}/>:route==='/record'?<JournalPage {...props}/>:<EmptyState title="页面尚未开放"><a href="#/record">返回记录</a></EmptyState>}</AppShell>;
 }
 export function App(){
  const [repo,setRepo]=useState<Repository|null>(null),[prefs,setPrefs]=useState<Preferences|null>(null),[error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false);
- useEffect(()=>{let active=true;let connection:Repository|undefined;openRepository(import.meta.env.BASE_URL).then(async value=>{connection=value;const pref=await value.readPreferences();if(active){setRepo(value);setPrefs(pref);}else value.close();}).catch(e=>setError(String(e)));return()=>{active=false;connection?.close();};},[]);
+ useEffect(()=>{let active=true;let connection:Repository|undefined;openRepository(import.meta.env.BASE_URL).then(async value=>{connection=value;for(const space of ['personal','demo'] as const){const snapshot=await value.read(space);for(const item of snapshot.care){if(item.status==='running'||item.status==='paused')await value.saveCare(space,{...item,status:'interrupted',after:undefined});}}const pref=await value.readPreferences();if(active){setRepo(value);setPrefs(pref);}else value.close();}).catch(e=>setError(String(e)));return()=>{active=false;connection?.close();};},[]);
  async function choose(space:Space){if(!repo||!prefs)return;setBusy(true);try{const next={...prefs,space};await repo.savePreferences(next);setPrefs(next);}catch(e){setError(String(e));}finally{setBusy(false);}}
  if(error)return <main className="welcome"><StatusMessage error={error}/><button onClick={()=>location.reload()}>重新打开</button></main>;
  if(!repo||!prefs)return <main className="welcome"><p role="status">正在打开心晴…</p></main>;
