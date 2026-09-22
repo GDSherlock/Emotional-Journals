@@ -5,6 +5,7 @@ import type {Preferences,Space} from '../domain/types';
 import {useWorkspace} from './useWorkspace';
 import {useRoute,allowLeave,setDirty,navigate} from './router';
 import {AppShell} from './AppShell';
+import {InsightsPage} from '../insights/InsightsPage';
 import {JournalPage} from '../journal/JournalPage';
 import {ReviewPage} from '../journal/ReviewPage';
 import {StatusMessage,EmptyState} from '../ui/StatusMessage';
@@ -12,7 +13,7 @@ function Workspace({repo,prefs,setPrefs}:{repo:Repository;prefs:Preferences;setP
  const space=prefs.space!;const route=useRoute();const state=useWorkspace(repo,space);
  async function switchSpace(){if(!allowLeave())return;try{const next={...prefs,space:(space==='personal'?'demo':'personal') as Space};await repo.savePreferences(next);setDirty(false);setPrefs(next);navigate('/record');}catch(e){alert(String(e));}}
  const props={repo,space,snapshot:state.snapshot,refresh:state.refresh};
- return <AppShell space={space} route={route} onSwitch={switchSpace}><StatusMessage error={state.error}/>{state.error?<button onClick={()=>void state.refresh()}>重试读取</button>:state.loading?<p role="status">正在打开你的记录…</p>:route.startsWith('/review')?<ReviewPage key={space+route} {...props} route={route}/>:route==='/record'?<JournalPage {...props}/>:<EmptyState title="页面尚未开放"><a href="#/record">返回记录</a></EmptyState>}</AppShell>;
+ return <AppShell space={space} route={route} onSwitch={switchSpace}><StatusMessage error={state.error}/>{state.error?<button onClick={()=>void state.refresh()}>重试读取</button>:state.loading?<p role="status">正在打开你的记录…</p>:route.startsWith('/review')?<ReviewPage key={space+route} {...props} route={route}/>:route==='/insights'?<InsightsPage {...props} prefs={prefs} setPrefs={setPrefs}/>:route==='/record'?<JournalPage {...props}/>:<EmptyState title="页面尚未开放"><a href="#/record">返回记录</a></EmptyState>}</AppShell>;
 }
 export function App(){
  const [repo,setRepo]=useState<Repository|null>(null),[prefs,setPrefs]=useState<Preferences|null>(null),[error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false);
