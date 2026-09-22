@@ -5,6 +5,8 @@ import type {Preferences,Space} from '../domain/types';
 import {useWorkspace} from './useWorkspace';
 import {useRoute,allowLeave,setDirty,navigate} from './router';
 import {AppShell} from './AppShell';
+import {DataPage} from '../settings/DataPage';
+import {PreferencesPage} from '../settings/PreferencesPage';
 import {DemoNotice} from '../demo/DemoNotice';
 import {seedDemo} from '../demo/seed';
 import {AiExamplePage} from '../demo/AiExamplePage';
@@ -17,7 +19,7 @@ function Workspace({repo,prefs,setPrefs}:{repo:Repository;prefs:Preferences;setP
  const space=prefs.space!;const route=useRoute();const state=useWorkspace(repo,space);
  async function switchSpace(){if(!allowLeave())return;try{const target=(space==='personal'?'demo':'personal') as Space;if(target==='demo'&&!prefs.demoInitialized)await repo.replace('demo',seedDemo(new Date()));const next={...prefs,space:target,demoInitialized:prefs.demoInitialized||target==='demo',rangeDays:target==='demo'?30 as const:prefs.rangeDays};await repo.savePreferences(next);setDirty(false);setPrefs(next);navigate('/record');}catch(e){alert(String(e));}}
  const props={repo,space,snapshot:state.snapshot,refresh:state.refresh};
- return <AppShell space={space} route={route} onSwitch={switchSpace}>{space==='demo'&&!state.loading?<DemoNotice {...props}/>:null}<StatusMessage error={state.error}/>{state.error?<button onClick={()=>void state.refresh()}>重试读取</button>:state.loading?<p role="status">正在打开你的记录…</p>:route.startsWith('/review')?<ReviewPage key={space+route} {...props} route={route}/>:route==='/ai-example'?<AiExamplePage/>:route.startsWith('/care')?<CarePage key={space+route} {...props} route={route} prefs={prefs} setPrefs={setPrefs}/>:route==='/insights'?<InsightsPage {...props} prefs={prefs} setPrefs={setPrefs}/>:route==='/record'?<JournalPage {...props}/>:<EmptyState title="页面尚未开放"><a href="#/record">返回记录</a></EmptyState>}</AppShell>;
+ return <AppShell space={space} route={route} onSwitch={switchSpace}>{space==='demo'&&!state.loading?<DemoNotice {...props}/>:null}<StatusMessage error={state.error}/>{state.error?<button onClick={()=>void state.refresh()}>重试读取</button>:state.loading?<p role="status">正在打开你的记录…</p>:route.startsWith('/review')?<ReviewPage key={space+route} {...props} route={route}/>:route==='/data'?<DataPage {...props}/>:route==='/preferences'?<PreferencesPage repo={repo} prefs={prefs} setPrefs={setPrefs}/>:route==='/ai-example'?<AiExamplePage/>:route.startsWith('/care')?<CarePage key={space+route} {...props} route={route} prefs={prefs} setPrefs={setPrefs}/>:route==='/insights'?<InsightsPage {...props} prefs={prefs} setPrefs={setPrefs}/>:route==='/record'?<JournalPage {...props}/>:<EmptyState title="没有找到这个页面"><a href="#/record">返回记录</a></EmptyState>}</AppShell>;
 }
 export function App(){
  const [repo,setRepo]=useState<Repository|null>(null),[prefs,setPrefs]=useState<Preferences|null>(null),[error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false);
