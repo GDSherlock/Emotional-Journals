@@ -10,7 +10,7 @@ export interface Repository {
   read(space: Space): Promise<Snapshot>;
   saveJournal(space: Space, entry: Journal): Promise<void>;
   deleteJournal(space: Space, id: string): Promise<void>;
-  saveCare(space: Space, entry: CareRecord): Promise<void>;
+  saveCare(space: Space, entry: CareRecord, create?: boolean): Promise<void>;
   deleteCare(space: Space, id: string): Promise<void>;
   replace(space: Space, snapshot: Snapshot): Promise<void>;
   readPreferences(): Promise<Preferences>;
@@ -51,9 +51,21 @@ export async function openRepository(base: string): Promise<Repository> {
       write(["journals"], (tx) => {
         tx.objectStore("journals").put({ space, id: data.id, data });
       }),
-    saveCare: (space, data) =>
+    saveCare: (space, data, create = false) =>
       write(["care"], (tx) => {
-        tx.objectStore("care").put({ space, id: data.id, data });
+        const store = tx.objectStore("care");
+        if (create) {
+          store.add({ space, id: data.id, data });
+          return;
+        }
+        const request = store.get([space, data.id]);
+        request.onsuccess = () => {
+          if (!request.result) {
+            tx.abort();
+            return;
+          }
+          store.put({ space, id: data.id, data });
+        };
       }),
     deleteCare: (space, id) =>
       write(["care"], (tx) => {

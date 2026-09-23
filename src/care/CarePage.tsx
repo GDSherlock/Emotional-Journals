@@ -87,7 +87,7 @@ export function CarePage({
       lastTick: now,
     };
     try {
-      await repo.saveCare(space, next.record);
+      await repo.saveCare(space, next.record, true);
       setSession(next);
     } catch (e) {
       setError("无法保存活动，请重试。" + String(e));

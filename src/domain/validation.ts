@@ -59,10 +59,21 @@ function choices<T extends string>(
     throw new Error("情绪或事件选项无效");
   return [...value] as T[];
 }
+function id(value: unknown): string {
+  const valueText = text(value, "ID");
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.:-]*$/.test(valueText))
+    throw new Error("记录 ID 无效");
+  return valueText;
+}
+function checkDatePair(date: string, instant: string) {
+  // UTC-12 through UTC+14: saved local midnight remains within 36h of the instant.
+  if (Math.abs(Date.parse(date) - Date.parse(instant)) > 36 * 60 * 60 * 1000)
+    throw new Error("日期与记录时间不一致");
+}
 export function validateJournal(value: unknown, now: Date): Journal {
   const v = object(value);
-  return {
-    id: text(v.id, "ID"),
+  const result: Journal = {
+    id: id(v.id),
     occurredAt: timestamp(v.occurredAt, now),
     localDate: day(v.localDate),
     feeling: score(v.feeling),
@@ -73,6 +84,8 @@ export function validateJournal(value: unknown, now: Date): Journal {
     createdAt: timestamp(v.createdAt, now),
     updatedAt: timestamp(v.updatedAt, now),
   };
+  checkDatePair(result.localDate, result.occurredAt);
+  return result;
 }
 export function validateCare(value: unknown, now: Date): CareRecord {
   const v = object(value);
@@ -86,7 +99,7 @@ export function validateCare(value: unknown, now: Date): CareRecord {
   )
     throw new Error("活动类型或状态无效");
   const result: CareRecord = {
-    id: text(v.id, "ID"),
+    id: id(v.id),
     kind: kind as CareRecord["kind"],
     status: status as CareRecord["status"],
     startedAt: timestamp(v.startedAt, now),
@@ -95,8 +108,7 @@ export function validateCare(value: unknown, now: Date): CareRecord {
   if (v.endDate !== undefined) result.endDate = day(v.endDate);
   if (v.before !== undefined) result.before = score(v.before);
   if (v.after !== undefined) result.after = score(v.after);
-  if (v.journalId !== undefined)
-    result.journalId = text(v.journalId, "关联日记");
+  if (v.journalId !== undefined) result.journalId = id(v.journalId);
   if (status === "completed" && (!result.endedAt || !result.endDate))
     throw new Error("完成的活动缺少结束时间");
   if (
@@ -106,5 +118,7 @@ export function validateCare(value: unknown, now: Date): CareRecord {
     throw new Error("结束时间早于开始时间");
   if (status !== "completed" && result.after !== undefined)
     throw new Error("未完成活动不能有结束评分");
+  if (result.endDate && result.endedAt)
+    checkDatePair(result.endDate, result.endedAt);
   return result;
 }

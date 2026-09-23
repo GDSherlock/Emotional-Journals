@@ -5,7 +5,12 @@ import { seedDemo } from "./seed";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { StatusMessage } from "../ui/StatusMessage";
 import { allowLeave, setDirty } from "../app/router";
-export function DemoNotice({ repo, snapshot, refresh }: PageProps) {
+export function DemoNotice({
+  repo,
+  snapshot,
+  refresh,
+  onReset,
+}: PageProps & { onReset: () => void }) {
   const [confirm, setConfirm] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
@@ -16,6 +21,7 @@ export function DemoNotice({ repo, snapshot, refresh }: PageProps) {
     try {
       await repo.replace("demo", seedDemo(new Date()));
       setDirty(false);
+      onReset();
       await refresh();
       setConfirm(false);
     } catch (e) {

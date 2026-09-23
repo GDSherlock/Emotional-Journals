@@ -10,8 +10,10 @@ import { setDirty } from "../app/router";
 export function JournalForm({
   initial,
   onSave,
+  onView,
 }: {
   initial?: Journal;
+  onView?: () => void;
   onSave: (entry: Journal) => Promise<void>;
 }) {
   const [id] = useState(() => initial?.id ?? crypto.randomUUID());
@@ -39,7 +41,10 @@ export function JournalForm({
       const entry = validateJournal(
         {
           id,
-          occurredAt: new Date(occurred).toISOString(),
+          occurredAt:
+            initial && datetimeInput(new Date(initial.occurredAt)) === occurred
+              ? initial.occurredAt
+              : new Date(occurred).toISOString(),
           localDate:
             initial && datetimeInput(new Date(initial.occurredAt)) === occurred
               ? initial.localDate
@@ -75,7 +80,16 @@ export function JournalForm({
         <h2>记录已保存</h2>
         <p>谢谢你，愿意停下来听一听自己。</p>
         <div className="actions">
-          <a className="button" href={`#/review/journal/${id}`}>
+          <a
+            className="button"
+            href={`#/review/journal/${id}`}
+            onClick={(e) => {
+              if (onView) {
+                e.preventDefault();
+                onView();
+              }
+            }}
+          >
             查看记录
           </a>
           <a className="button primary" href={`#/care?journal=${id}`}>
@@ -93,103 +107,105 @@ export function JournalForm({
         setError(null);
       }}
     >
-      <div className="form-top">
-        <span>留一点时间，给此刻的自己</span>
-        <input
-          aria-label="发生时间"
-          type="datetime-local"
-          required
-          value={occurred}
-          max={datetimeInput(new Date())}
-          onChange={(e) => setOccurred(e.target.value)}
+      <fieldset disabled={busy} className="form-fields">
+        <div className="form-top">
+          <span>留一点时间，给此刻的自己</span>
+          <input
+            aria-label="发生时间"
+            type="datetime-local"
+            required
+            value={occurred}
+            max={datetimeInput(new Date())}
+            onChange={(e) => setOccurred(e.target.value)}
+          />
+        </div>
+        <RatingInput
+          label="此刻，你感觉怎么样？"
+          value={feeling}
+          onChange={setFeeling}
         />
-      </div>
-      <RatingInput
-        label="此刻，你感觉怎么样？"
-        value={feeling}
-        onChange={setFeeling}
-      />
-      <fieldset>
-        <legend>
-          哪些情绪正在发生？ <small>可多选</small>
-        </legend>
-        <div className="chips">
-          {emotions.map((item) => (
-            <label
-              key={item}
-              className={`chip ${emotion.includes(item) ? "selected" : ""}`}
-            >
-              <input
-                type="checkbox"
-                checked={emotion.includes(item)}
-                onChange={() =>
-                  setEmotion(
-                    emotion.includes(item)
-                      ? emotion.filter((x) => x !== item)
-                      : [...emotion, item],
-                  )
-                }
-              />
-              {item}
-            </label>
-          ))}
+        <fieldset>
+          <legend>
+            哪些情绪正在发生？ <small>可多选</small>
+          </legend>
+          <div className="chips">
+            {emotions.map((item) => (
+              <label
+                key={item}
+                className={`chip ${emotion.includes(item) ? "selected" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={emotion.includes(item)}
+                  onChange={() =>
+                    setEmotion(
+                      emotion.includes(item)
+                        ? emotion.filter((x) => x !== item)
+                        : [...emotion, item],
+                    )
+                  }
+                />
+                {item}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <RatingInput
+          label="情绪有多强烈？"
+          intensity
+          value={strength}
+          onChange={setStrength}
+        />
+        <fieldset>
+          <legend>
+            和什么有关？ <small>选填 · 可多选</small>
+          </legend>
+          <div className="chips">
+            {tags.map((item) => (
+              <label
+                key={item}
+                className={`chip ${events.includes(item) ? "selected" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={events.includes(item)}
+                  onChange={() =>
+                    setEvents(
+                      events.includes(item)
+                        ? events.filter((x) => x !== item)
+                        : [...events, item],
+                    )
+                  }
+                />
+                {item}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="writing">
+          <label htmlFor="journal-text">
+            一句话日记 <small>选填</small>
+          </label>
+          <textarea
+            id="journal-text"
+            aria-label="一句话日记"
+            rows={4}
+            placeholder="发生了什么？有什么想对自己说的？"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <span className="word-count">{Array.from(text).length} / 5000</span>
+        </div>
+        <StatusMessage error={error} />
+        <div className="form-bottom">
+          <span>
+            <LockKeyhole size={14} /> 只保存在当前浏览器
+          </span>
+          <button className="primary" disabled={busy}>
+            {busy ? "正在保存…" : "保存记录"} <ArrowRight size={16} />
+          </button>
         </div>
       </fieldset>
-      <RatingInput
-        label="情绪有多强烈？"
-        intensity
-        value={strength}
-        onChange={setStrength}
-      />
-      <fieldset>
-        <legend>
-          和什么有关？ <small>选填 · 可多选</small>
-        </legend>
-        <div className="chips">
-          {tags.map((item) => (
-            <label
-              key={item}
-              className={`chip ${events.includes(item) ? "selected" : ""}`}
-            >
-              <input
-                type="checkbox"
-                checked={events.includes(item)}
-                onChange={() =>
-                  setEvents(
-                    events.includes(item)
-                      ? events.filter((x) => x !== item)
-                      : [...events, item],
-                  )
-                }
-              />
-              {item}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <div className="writing">
-        <label htmlFor="journal-text">
-          一句话日记 <small>选填</small>
-        </label>
-        <textarea
-          id="journal-text"
-          aria-label="一句话日记"
-          rows={4}
-          placeholder="发生了什么？有什么想对自己说的？"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <span className="word-count">{Array.from(text).length} / 5000</span>
-      </div>
-      <StatusMessage error={error} />
-      <div className="form-bottom">
-        <span>
-          <LockKeyhole size={14} /> 只保存在当前浏览器
-        </span>
-        <button className="primary" disabled={busy}>
-          {busy ? "正在保存…" : "保存记录"} <ArrowRight size={16} />
-        </button>
-      </div>
     </form>
   );
 }

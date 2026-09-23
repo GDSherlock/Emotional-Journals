@@ -35,3 +35,37 @@ test("double clicking save persists only one record and shows success", async ()
   expect(await screen.findByText("记录已保存")).toBeVisible();
   expect(writes).toBe(1);
 });
+test("pending save disables edits so newly typed text cannot be silently discarded", async () => {
+  const user = userEvent.setup();
+  let finish!: () => void;
+  render(
+    <JournalForm
+      initial={journal()}
+      onSave={() =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        })
+      }
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: "保存记录" }));
+  expect(screen.getByLabelText("一句话日记")).toBeDisabled();
+  finish();
+  expect(await screen.findByText("记录已保存")).toBeVisible();
+});
+test("editing only text preserves original instant including seconds", async () => {
+  const user = userEvent.setup();
+  let savedTime = "";
+  render(
+    <JournalForm
+      initial={journal({ occurredAt: "2026-09-20T10:00:49Z" })}
+      onSave={async (entry) => {
+        savedTime = entry.occurredAt;
+      }}
+    />,
+  );
+  await user.type(screen.getByLabelText("一句话日记"), "，补记一句");
+  await user.click(screen.getByRole("button", { name: "保存记录" }));
+  expect(await screen.findByText("记录已保存")).toBeVisible();
+  expect(savedTime).toBe("2026-09-20T10:00:49Z");
+});

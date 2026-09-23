@@ -18,7 +18,7 @@ test("workspaces persist independently across reopen and reset", async () => {
 test("deleting a journal clears its care link but preserves feedback", async () => {
   const repo = await openRepository("/" + crypto.randomUUID());
   await repo.saveJournal("personal", journal());
-  await repo.saveCare("personal", care({ journalId: "j1" }));
+  await repo.saveCare("personal", care({ journalId: "j1" }), true);
   await repo.deleteJournal("personal", "j1");
   const saved = await repo.read("personal");
   expect(saved.journals).toHaveLength(0);
@@ -36,4 +36,11 @@ test("failed replacement preserves original snapshot atomically", async () => {
     }),
   ).rejects.toThrow();
   expect((await repo.read("personal")).journals[0].text).toBe("今天有点累");
+});
+test("an obsolete care session cannot recreate records after clear", async () => {
+  const repo = await openRepository("/" + crypto.randomUUID());
+  await repo.replace("personal", { journals: [], care: [care()] });
+  await repo.replace("personal", { journals: [], care: [] });
+  await expect(repo.saveCare("personal", care({ after: 1 }))).rejects.toThrow();
+  expect((await repo.read("personal")).care).toEqual([]);
 });

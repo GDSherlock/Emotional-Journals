@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Leaf, LockKeyhole } from "lucide-react";
 import { openRepository, type Repository } from "../storage/repository";
 import type { Preferences, Space } from "../domain/types";
+import { acquireWorkspaceLease } from "./lease";
 import { useWorkspace } from "./useWorkspace";
 import { useRoute, allowLeave, setDirty, navigate } from "./router";
 import { AppShell } from "./AppShell";
@@ -26,6 +27,7 @@ function Workspace({
 }) {
   const space = prefs.space!;
   const route = useRoute();
+  const [revision, setRevision] = useState(0);
   const state = useWorkspace(repo, space);
   async function switchSpace() {
     if (!allowLeave()) return;
@@ -55,37 +57,47 @@ function Workspace({
   };
   return (
     <AppShell space={space} route={route} onSwitch={switchSpace}>
-      {space === "demo" && !state.loading ? <DemoNotice {...props} /> : null}
-      <StatusMessage error={state.error} />
-      {state.error ? (
-        <button onClick={() => void state.refresh()}>重试读取</button>
-      ) : state.loading ? (
-        <p role="status">正在打开你的记录…</p>
-      ) : route.startsWith("/review") ? (
-        <ReviewPage key={space + route} {...props} route={route} />
-      ) : route === "/data" ? (
-        <DataPage {...props} />
-      ) : route === "/preferences" ? (
-        <PreferencesPage repo={repo} prefs={prefs} setPrefs={setPrefs} />
-      ) : route === "/ai-example" ? (
-        <AiExamplePage />
-      ) : route.startsWith("/care") ? (
-        <CarePage
-          key={space + route}
+      {space === "demo" && !state.loading ? (
+        <DemoNotice
           {...props}
-          route={route}
-          prefs={prefs}
-          setPrefs={setPrefs}
+          onReset={() => {
+            setRevision((n) => n + 1);
+            navigate("/record");
+          }}
         />
-      ) : route === "/insights" ? (
-        <InsightsPage {...props} prefs={prefs} setPrefs={setPrefs} />
-      ) : route === "/record" ? (
-        <JournalPage {...props} />
-      ) : (
-        <EmptyState title="没有找到这个页面">
-          <a href="#/record">返回记录</a>
-        </EmptyState>
-      )}
+      ) : null}
+      <StatusMessage error={state.error} />
+      <div key={space + revision}>
+        {state.error ? (
+          <button onClick={() => void state.refresh()}>重试读取</button>
+        ) : state.loading ? (
+          <p role="status">正在打开你的记录…</p>
+        ) : route.startsWith("/review") ? (
+          <ReviewPage key={space + route} {...props} route={route} />
+        ) : route === "/data" ? (
+          <DataPage {...props} />
+        ) : route === "/preferences" ? (
+          <PreferencesPage repo={repo} prefs={prefs} setPrefs={setPrefs} />
+        ) : route === "/ai-example" ? (
+          <AiExamplePage />
+        ) : route.startsWith("/care") ? (
+          <CarePage
+            key={space + route}
+            {...props}
+            route={route}
+            prefs={prefs}
+            setPrefs={setPrefs}
+          />
+        ) : route === "/insights" ? (
+          <InsightsPage {...props} prefs={prefs} setPrefs={setPrefs} />
+        ) : route === "/record" ? (
+          <JournalPage {...props} />
+        ) : (
+          <EmptyState title="没有找到这个页面">
+            <a href="#/record">返回记录</a>
+          </EmptyState>
+        )}
+      </div>
     </AppShell>
   );
 }
@@ -97,7 +109,16 @@ export function App() {
   useEffect(() => {
     let active = true;
     let connection: Repository | undefined;
-    openRepository(import.meta.env.BASE_URL)
+    let release: (() => void) | undefined;
+    acquireWorkspaceLease(navigator.locks, import.meta.env.BASE_URL)
+      .then(async (acquired) => {
+        release = acquired;
+        if (!active) {
+          acquired();
+          throw new Error("页面已关闭");
+        }
+        return openRepository(import.meta.env.BASE_URL);
+      })
       .then(async (value) => {
         connection = value;
         for (const space of ["personal", "demo"] as const) {
@@ -117,10 +138,15 @@ export function App() {
           setPrefs(pref);
         } else value.close();
       })
-      .catch((e) => setError(String(e)));
+      .catch((e) => {
+        connection?.close();
+        release?.();
+        if (active) setError(String(e));
+      });
     return () => {
       active = false;
       connection?.close();
+      release?.();
     };
   }, []);
   async function choose(space: Space) {

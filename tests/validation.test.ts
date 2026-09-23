@@ -34,3 +34,12 @@ test("care requires legitimate chronology and optional scores", () => {
   ])
     expect(() => validateCare({ ...care(), ...change }, now)).toThrow();
 });
+test("imported calendar dates must plausibly match the recorded instant", () => {
+  expect(() =>
+    validateJournal(journal({ localDate: "2030-01-01" }), now),
+  ).toThrow();
+  expect(() => validateCare(care({ endDate: "2030-01-01" }), now)).toThrow();
+  expect(() =>
+    validateJournal(journal({ id: "\uffff-hidden" }), now),
+  ).toThrow();
+});

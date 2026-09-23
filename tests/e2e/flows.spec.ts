@@ -161,13 +161,11 @@ test("invalid backup preserves data and clearing personal does not clear demo", 
 }) => {
   await enter(page, true);
   await page.getByRole("link", { name: "数据管理", exact: true }).click();
-  await page
-    .locator("input[type=file]")
-    .setInputFiles({
-      name: "bad.json",
-      mimeType: "application/json",
-      buffer: Buffer.from('{"version":2}'),
-    });
+  await page.locator("input[type=file]").setInputFiles({
+    name: "bad.json",
+    mimeType: "application/json",
+    buffer: Buffer.from('{"version":2}'),
+  });
   await expect(page.getByRole("alert")).toContainText("版本");
   await page.getByRole("button", { name: "清空个人数据", exact: true }).click();
   await page.getByRole("button", { name: "取消", exact: true }).click();

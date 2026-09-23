@@ -61,6 +61,7 @@ export function ReviewPage({
             {editing && entry ? (
               <JournalForm
                 initial={entry}
+                onView={() => setEditing(false)}
                 onSave={async (value) => {
                   await repo.saveJournal(space, value);
                   await refresh();
