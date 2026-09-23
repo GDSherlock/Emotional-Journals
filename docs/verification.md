@@ -47,4 +47,21 @@
 
 ## 发布
 
-目标仓库由用户指定为 https://github.com/GDSherlock/Emotional-Journals 。已确认仓库为空，当前账号有访问权限。尚未推送，不能将本地验证等同于线上验证。
+- 仓库：https://github.com/GDSherlock/Emotional-Journals
+- 线上地址：https://gdsherlock.github.io/Emotional-Journals/
+- 发布代码提交：`510d2b021a38371a45a9bd22e8126804ea1cf761`
+- 工作流：https://github.com/GDSherlock/Emotional-Journals/actions/runs/35808246565
+- 2026-09-23：build 和 deploy 均 success，HTTPS 已启用。
+- 首页 HTTP 200，标题为“心晴 · 情绪日记与自我关怀”。
+- JS `index-CPWC177x.js`、CSS `index-CumEBRWS.css`、`audio/rain.wav` 均成功取得，SHA-256 与本地生产构建逐一一致。
+- 当前原始项目目录已快进合入发布代码，main 已推送到 origin/main。
+- 本节证明工作流和静态产物已发布，不代表最终线上浏览器交互验收。
+
+## 交给用户的浏览器验收
+
+1. 首次选择示例故事，查看洞察、展开依据、打开明确标注的 AI 示例；切换个人空间应为空白。
+2. 保存个人日记，刷新后确认仍在；修改文字并保存后点击“查看记录”，应直接看到更新详情。
+3. 完成一次关怀并填写前后评分，回看对应记录和洞察；试试暂停、退出及音频。
+4. 导出备份，导入时检查预览及替换提示；先用测试记录验证恢复，再保存真实日记。
+5. 第二个标签页应显示使用中提示；关闭原页后重新打开可继续。
+6. 用手机检查四栏导航、表单触控、图表数据列表；在活动中重置示例后不应恢复旧活动。
